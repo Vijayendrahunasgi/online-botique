@@ -34,8 +34,9 @@ jobs:
         cd ../../
 
     - name: Build and Push Docker Images for All Services
+    # services=("frontend" "checkoutservice" "currencyservice" "emailservice" "paymentservice" "productcatalogservice" "recommendationservice" "shippingservice")
       run: |
-        services=("frontend" "checkoutservice" "currencyservice" "emailservice" "paymentservice" "productcatalogservice" "recommendationservice" "shippingservice")
+        services=("frontend")
         for svc in "${services[@]}"; do
           IMAGE_TAG="${{ secrets.DOCKERHUB_USERNAME }}/$svc:latest"
           echo "Building image for $svc: $IMAGE_TAG"
@@ -70,6 +71,7 @@ jobs:
 
     - name: Deploy to AKS
       run: |
+        kubectl delete deployment frontend --ignore-not-found=true 
         kubectl apply -f ./release/kubernetes-manifests.yaml
         kubectl rollout restart deployment/frontend
 
