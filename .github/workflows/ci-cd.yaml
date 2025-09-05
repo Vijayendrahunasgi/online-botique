@@ -35,11 +35,20 @@ jobs:
 
     - name: Build and Push Docker Images for All Services
       run: |
-        services=("frontend" "cartservice" "checkoutservice" "currencyservice" "emailservice" "paymentservice" "productcatalogservice" "recommendationservice" "shippingservice")
+        services=("frontend" "checkoutservice" "currencyservice" "emailservice" "paymentservice" "productcatalogservice" "recommendationservice" "shippingservice")
         for svc in "${services[@]}"; do
           IMAGE_TAG="${{ secrets.DOCKERHUB_USERNAME }}/$svc:latest"
           echo "Building image for $svc: $IMAGE_TAG"
           docker build -t $IMAGE_TAG -f ./src/$svc/Dockerfile ./src/$svc || exit 1
+          docker push $IMAGE_TAG || exit 1
+        done
+    - name: Build and Push Cartservice 
+      run: |
+	 services=("cartservice")
+         for svc in "${services[@]}"; do
+          IMAGE_TAG="${{ secrets.DOCKERHUB_USERNAME }}/$svc:latest"
+          echo "Building image for $svc: $IMAGE_TAG"
+          docker build -t $IMAGE_TAG -f ./src/$svc/src/Dockerfile ./src/$svc/src || exit 1
           docker push $IMAGE_TAG || exit 1
         done
 
