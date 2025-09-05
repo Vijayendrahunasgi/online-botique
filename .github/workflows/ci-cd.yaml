@@ -39,7 +39,7 @@ jobs:
         for svc in "${services[@]}"; do
           IMAGE_TAG="${{ secrets.DOCKERHUB_USERNAME }}/$svc:latest"
           echo "Building image for $svc: $IMAGE_TAG"
-          docker build -t $IMAGE_TAG -f ./src/$svc/Dockerfile ./src/$svc || exit 1
+          docker build --no-cache -t $IMAGE_TAG -f ./src/$svc/Dockerfile ./src/$svc || exit 1
           docker push $IMAGE_TAG || exit 1
         done
     - name: Build and Push Images for cartservice    
@@ -71,6 +71,7 @@ jobs:
     - name: Deploy to AKS
       run: |
         kubectl apply -f ./release/kubernetes-manifests.yaml
+        kubectl rollout restart deployment/frontend
 
     - name: Wait for Deployments to Complete
       run: |
