@@ -78,8 +78,6 @@ jobs:
     - name: Wait for Deployments to Complete
       run: |
         kubectl rollout status deployment/frontend
-        kubectl rollout status deployment/cartservice
-        # Add rollout status for other important deployments as needed
 
     - name: Smoke Test Frontend Service
       run: |
