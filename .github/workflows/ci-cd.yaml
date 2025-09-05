@@ -1,0 +1,77 @@
+name: Full CI/CD Pipeline with Frontend Go Unit Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+env:
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Run Unit Tests on Frontend Service (Go)
+      run: |
+        cd ./src/frontend || exit 1
+        go mod download
+        go test ./... -v || exit 1
+        cd ../../
+
+    - name: Build and Push Docker Images for All Services
+      run: |
+        services=("frontend" "cartservice" "checkoutservice" "currencyservice" "emailservice" "paymentservice" "productcatalogservice" "recommendationservice" "shippingservice")
+        for svc in "${services[@]}"; do
+          IMAGE_TAG="${{ secrets.DOCKERHUB_USERNAME }}/$svc:latest"
+          echo "Building image for $svc: $IMAGE_TAG"
+          docker build -t $IMAGE_TAG -f ./src/$svc/Dockerfile ./src/$svc || exit 1
+          docker push $IMAGE_TAG || exit 1
+        done
+
+    - name: Azure CLI Login
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Get AKS Credentials
+      run: |
+        az aks get-credentials --resource-group ${{ secrets.AKS_RESOURCE_GROUP }} --name ${{ secrets.AKS_CLUSTER_NAME }}
+
+    - name: Update Kubernetes Manifests with Docker Hub Image Tags
+      run: |
+        for svc in "${services[@]}"; do
+          sed -i "s|image: .*/$svc:.*|image: ${{ secrets.DOCKERHUB_USERNAME }}/$svc:latest|g" ./release/kubernetes-manifests.yaml
+        done
+
+    - name: Deploy to AKS
+      run: |
+        kubectl apply -f ./release/kubernetes-manifests.yaml
+
+    - name: Wait for Deployments to Complete
+      run: |
+        kubectl rollout status deployment/frontend
+        kubectl rollout status deployment/cartservice
+        # Add rollout status for other important deployments as needed
+
+    - name: Smoke Test Frontend Service
+      run: |
+        FRONTEND_IP=$(kubectl get svc frontend-external -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        echo "Frontend External IP: $FRONTEND_IP"
+        for i in {1..5}; do
+          curl -f http://$FRONTEND_IP && break || sleep 10
+        done
