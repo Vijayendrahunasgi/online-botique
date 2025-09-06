@@ -110,7 +110,7 @@ jobs:
         from: MS_yk11GY@test-q3enl6kv13842vwr.mlsender.net
         body: |
           Please find attached the DevSecOps scan reports.
-          attachments: trivy-image-report.txt,trivy-secrets-report.txt,trivy-k8s-report.txt
+        attachments: trivy-image-report.txt,trivy-secrets-report.txt,trivy-k8s-report.txt
 
     - name: Azure CLI Login
       uses: azure/login@v1
