@@ -125,6 +125,7 @@ jobs:
             trivy-k8s-report.txt
 
   send-email:
+    needs: build-test-deploy
     runs-on: ubuntu-latest
 
     steps:
