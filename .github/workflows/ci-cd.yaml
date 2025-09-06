@@ -122,7 +122,7 @@ jobs:
 
     - name: Smoke Test Frontend Service
       run: |
-        FRONTEND_IP=$(kubectl get svc frontend-external -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        FRONTEND_IP=$(kubectl get service frontend-external -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
         echo "Frontend External IP: $FRONTEND_IP"
         for i in {1..5}; do
           curl -f http://$FRONTEND_IP && break || sleep 10
