@@ -116,7 +116,7 @@ jobs:
           done
       
       - name: Upload scan reports
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: scan-reports
           path: |
@@ -130,7 +130,7 @@ jobs:
     steps:
 
       - name: Download scan reports
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: scan-reports
           path: ./scan-reports
