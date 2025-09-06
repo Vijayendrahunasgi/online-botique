@@ -54,6 +54,47 @@ jobs:
    #    done
 
 
+   # 1. Trivy Scan Docker Image
+    - name: Trivy Scan Docker Image for Vulnerabilities
+      uses: aquasecurity/trivy-action@v0.13.1
+      with:
+        image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/frontend:latest
+        format: 'table'
+        output: trivy-image-report.txt
+        exit-code: 0
+        severity: 'CRITICAL,HIGH'
+
+    - name: Print Trivy Image Scan Results
+      run: cat trivy-image-report.txt
+
+  # 2. Trivy Secret Scan (Source Code)
+    - name: Trivy Secret Scan (Source Code)
+      uses: aquasecurity/trivy-action@v0.13.1
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        skip-dirs: 'vendor,node_modules'
+        format: 'table'
+        output: trivy-secrets-report.txt
+        exit-code: 0
+        severity: 'CRITICAL,HIGH'
+
+    - name: Print Trivy Secrets Scan Results
+      run: cat trivy-secrets-report.txt
+
+# 3. Trivy Kubernetes Manifest Scan
+    - name: Trivy Kubernetes Manifest Scan (Misconfigurations)
+      uses: aquasecurity/trivy-action@v0.13.1
+      with:
+        scan-type: 'config'
+        scan-ref: './release/kubernetes-manifests.yaml'
+        format: 'table'
+        output: trivy-k8s-report.txt
+        exit-code: 0
+
+    - name: Print Trivy K8s Manifest Scan Results
+      run: cat trivy-k8s-report.txt
+
     - name: Azure CLI Login
       uses: azure/login@v1
       with:
