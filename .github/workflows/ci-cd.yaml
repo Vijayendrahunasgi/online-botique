@@ -95,23 +95,6 @@ jobs:
     - name: Print Trivy K8s Manifest Scan Results
       run: cat trivy-k8s-report.txt
 
-# Emailing all scan reports
-
-    - name: Send email with scan reports
-      uses: dawidd6/action-send-mail@v3
-      with:
-        server_address: smtp.mailersend.net
-        server_port: 2525
-        secure: true
-        username: ${{ secrets.SMTP_USERNAME }}
-        password: ${{ secrets.SMTP_PASSWORD }}
-        subject: "DevSecOps Scan Reports"
-        to: vijayendrapranesh.hunasgi@gmail.com
-        from: MS_yk11GY@test-q3enl6kv13842vwr.mlsender.net
-        body: |
-          Please find attached the DevSecOps scan reports.
-        attachments: trivy-image-report.txt,trivy-secrets-report.txt,trivy-k8s-report.txt
-
     - name: Azure CLI Login
       uses: azure/login@v1
       with:
@@ -144,3 +127,29 @@ jobs:
         for i in {1..5}; do
           curl -f http://$FRONTEND_IP && break || sleep 10
         done
+send-email:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Install swaks
+        run: sudo apt-get update && sudo apt-get install -y swaks
+      
+      - name: Send email with attachments
+        env:
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+        run: |
+          swaks --to vijayendrapranesh.hunasgi@gmail.com \
+                --from MS_yk11GY@test-q3enl6kv13842vwr.mlsender.net \
+                --server smtp.mailersend.net \
+                --port 587 \
+                --auth LOGIN \
+                --auth-user "$SMTP_USERNAME" \
+                --auth-password "$SMTP_PASSWORD" \
+                --tls \
+                --header "Subject: DevSecOps Scan Reports" \
+                --attach trivy-image-report.txt \
+                --attach trivy-secrets-report.txt \
+                --attach trivy-k8s-report.txt
