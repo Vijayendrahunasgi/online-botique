@@ -135,6 +135,13 @@ jobs:
         with:
           name: scan-reports
           path: ./scan-reports
+      - name: Concatenate scan reports
+        run: |
+          cat ./scan-reports/trivy-image-report.txt > full-scan-report.txt
+          echo -e "\n\n" >> full-scan-report.txt
+          cat ./scan-reports/trivy-secrets-report.txt >> full-scan-report.txt
+          echo -e "\n\n" >> full-scan-report.txt
+          cat ./scan-reports/trivy-k8s-report.txt >> full-scan-report.txt
 
       - name: Install swaks
         run: sudo apt-get update && sudo apt-get install -y swaks
@@ -153,6 +160,4 @@ jobs:
                 --auth-password "$SMTP_PASSWORD" \
                 --tls \
                 --header "Subject: DevSecOps Scan Reports" \
-                --attach trivy-image-report.txt \
-                --attach trivy-secrets-report.txt \
-                --attach trivy-k8s-report.txt
+                --body "$(cat full-scan-report.txt)"
