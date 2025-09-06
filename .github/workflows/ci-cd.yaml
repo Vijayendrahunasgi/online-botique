@@ -127,29 +127,29 @@ jobs:
         for i in {1..5}; do
           curl -f http://$FRONTEND_IP && break || sleep 10
         done
-send-email:
+  send-email:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
       
-      - name: Install swaks
-        run: sudo apt-get update && sudo apt-get install -y swaks
+    - name: Install swaks
+      run: sudo apt-get update && sudo apt-get install -y swaks
       
-      - name: Send email with attachments
-        env:
+    - name: Send email with attachments
+      env:
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-        run: |
-          swaks --to vijayendrapranesh.hunasgi@gmail.com \
-                --from MS_yk11GY@test-q3enl6kv13842vwr.mlsender.net \
-                --server smtp.mailersend.net \
-                --port 587 \
-                --auth LOGIN \
-                --auth-user "$SMTP_USERNAME" \
-                --auth-password "$SMTP_PASSWORD" \
-                --tls \
-                --header "Subject: DevSecOps Scan Reports" \
-                --attach trivy-image-report.txt \
-                --attach trivy-secrets-report.txt \
-                --attach trivy-k8s-report.txt
+          run: |
+            swaks --to vijayendrapranesh.hunasgi@gmail.com \
+                  --from MS_yk11GY@test-q3enl6kv13842vwr.mlsender.net \
+                  --server smtp.mailersend.net \
+                  --port 587 \
+                  --auth LOGIN \
+                  --auth-user "$SMTP_USERNAME" \
+                  --auth-password "$SMTP_PASSWORD" \
+                  --tls \
+                  --header "Subject: DevSecOps Scan Reports" \
+                  --attach trivy-image-report.txt \
+                  --attach trivy-secrets-report.txt \
+                  --attach trivy-k8s-report.txt
