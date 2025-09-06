@@ -95,6 +95,21 @@ jobs:
     - name: Print Trivy K8s Manifest Scan Results
       run: cat trivy-k8s-report.txt
 
+# Emailing all scan reports
+
+    - name: Send email with scan reports
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 465
+        username: ${{ secrets.SMTP_USERNAME }}
+        password: ${{ secrets.SMTP_PASSWORD }}
+        subject: "DevSecOps Scan Reports"
+        to: vijay.pranesh@gmail.com
+        from: ${{ secrets.SMTP_USERNAME }}
+        content_type: text/plain
+        attachments: trivy-image-report.txt,trivy-secrets-report.txt,trivy-k8s-report.txt
+
     - name: Azure CLI Login
       uses: azure/login@v1
       with:
