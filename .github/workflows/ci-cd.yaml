@@ -101,7 +101,7 @@ jobs:
       uses: dawidd6/action-send-mail@v3
       with:
         server_address: smtp.mailersend.net
-        server_port: 587
+        server_port: 2525
         secure: true
         username: ${{ secrets.SMTP_USERNAME }}
         password: ${{ secrets.SMTP_PASSWORD }}
