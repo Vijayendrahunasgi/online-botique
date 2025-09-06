@@ -32,6 +32,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"google.golang.org/grpc"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const (
@@ -160,6 +161,7 @@ func main() {
 	r.HandleFunc(baseUrl + "/_healthz", func(w http.ResponseWriter, _ *http.Request) { fmt.Fprint(w, "ok") })
 	r.HandleFunc(baseUrl + "/product-meta/{ids}", svc.getProductByID).Methods(http.MethodGet)
 	r.HandleFunc(baseUrl + "/bot", svc.chatBotHandler).Methods(http.MethodPost)
+	r.Handle("/metrics", promhttp.Handler())
 
 	var handler http.Handler = r
 	handler = &logHandler{log: log, next: handler}     // add logging
