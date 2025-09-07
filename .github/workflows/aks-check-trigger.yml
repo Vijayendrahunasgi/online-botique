@@ -1,0 +1,51 @@
+name: AKS Check and Trigger
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AKS_CLUSTER_NAME: boutique-aks
+  AKS_RESOURCE_GROUP: boutique-rg
+
+jobs:
+  aks-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Check if AKS cluster exists
+        id: check
+        run: |
+          if az aks show --name $AKS_CLUSTER_NAME --resource-group $AKS_RESOURCE_GROUP > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Trigger appropriate workflow
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const clusterExists = '${{ steps.check.outputs.exists }}'
+            if (clusterExists === 'false') {
+              console.log('Triggering AKS Creation workflow')
+              await github.rest.repos.createDispatchEvent({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                event_type: 'trigger-terraform-aks'
+              })
+            } else {
+              console.log('Triggering Build and Deploy workflow')
+              await github.rest.repos.createDispatchEvent({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                event_type: 'trigger-build-deploy'
+              })
+            }
