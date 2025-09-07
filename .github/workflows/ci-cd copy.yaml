@@ -10,50 +10,9 @@ env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
 
 jobs:
-  aks-check:
+  build-test-deploy:
     runs-on: ubuntu-latest
-    outputs:
-      cluster_exists: ${{ steps.check.outputs.exists }}
-    steps:
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Check if AKS cluster exists
-        id: check
-        run: |
-          if az aks show --name boutique-aks --resource-group boutique-rg > /dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
-  terraform:
-    runs-on: ubuntu-latest
-    needs: aks-check
-    if: needs.aks-check.outputs.cluster_exists == 'false'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Azure Login
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-
-      - name: Terraform Init
-        run: terraform init
-
-      - name: Terraform Apply
-        run: terraform apply -auto-approve
-
-  checkout-build:
-    runs-on: ubuntu-latest
-    needs: [aks-check, terraform]
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v3
@@ -67,32 +26,12 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-  unit-test:
-    runs-on: ubuntu-latest
-    needs: checkout-build
-    steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v3
-
       - name: Run Unit Tests on Frontend Service (Go)
         run: |
           cd ./src/frontend || exit 1
           go mod download
           go test ./... -v || exit 1
           cd ../../
-
-  docker-build-push:
-    runs-on: ubuntu-latest
-    needs: unit-test
-    steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and Push Docker Images for All Services
         run: |
@@ -103,13 +42,6 @@ jobs:
             docker build --no-cache -t $IMAGE_TAG -f ./src/$svc/Dockerfile ./src/$svc || exit 1
             docker push $IMAGE_TAG || exit 1
           done
-
-  trivy-scan:
-    runs-on: ubuntu-latest
-    needs: docker-build-push
-    steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v3
 
       - name: Trivy Scan Docker Image for Vulnerabilities
         uses: aquasecurity/trivy-action@0.33.1
@@ -149,22 +81,6 @@ jobs:
       - name: Print Trivy K8s Manifest Scan Results
         run: cat trivy-k8s-report.txt
 
-      - name: Upload scan reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: scan-reports
-          path: |
-            trivy-image-report.txt
-            trivy-secrets-report.txt
-            trivy-k8s-report.txt
-
-  k8s-deploy:
-    runs-on: ubuntu-latest
-    needs: trivy-scan
-    steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v3
-
       - name: Azure CLI Login
         uses: azure/login@v1
         with:
@@ -191,10 +107,6 @@ jobs:
         run: |
           kubectl rollout status deployment/frontend
 
-  smoke-test:
-    runs-on: ubuntu-latest
-    needs: k8s-deploy
-    steps:
       - name: Smoke Test Frontend Service
         run: |
           FRONTEND_IP=$(kubectl get service frontend-external -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
@@ -202,17 +114,27 @@ jobs:
           for i in {1..5}; do
             curl -f http://$FRONTEND_IP && break || sleep 10
           done
+      
+      - name: Upload scan reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-reports
+          path: |
+            trivy-image-report.txt
+            trivy-secrets-report.txt
+            trivy-k8s-report.txt
 
   send-email:
+    needs: build-test-deploy
     runs-on: ubuntu-latest
-    needs: smoke-test
+
     steps:
+
       - name: Download scan reports
         uses: actions/download-artifact@v4
         with:
           name: scan-reports
           path: ./scan-reports
-
       - name: Concatenate scan reports
         run: |
           cat ./scan-reports/trivy-image-report.txt > full-scan-report.txt
