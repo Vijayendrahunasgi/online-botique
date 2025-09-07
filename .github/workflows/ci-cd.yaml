@@ -53,7 +53,7 @@ jobs:
       - name: Terraform Validate
         run: |
           cd terraform
-          terraform Validate
+          terraform validate
       
       - name: Terraform apply
         run: |
