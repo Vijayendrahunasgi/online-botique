@@ -63,6 +63,7 @@ jobs:
   checkout-build:
     runs-on: ubuntu-latest
     needs: [aks-check, terraform]
+    if: needs.aks-check.outputs.cluster_exists == 'true' || (needs.aks-check.outputs.cluster_exists == 'false' && needs.terraform.result == 'success')
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v3
