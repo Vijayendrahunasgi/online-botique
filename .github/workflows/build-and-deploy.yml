@@ -143,6 +143,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: k8s-deploy
     steps:
+      - name: Azure CLI Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials --resource-group ${{ secrets.AKS_RESOURCE_GROUP }} --name ${{ secrets.AKS_CLUSTER_NAME }}
+
       - name: Smoke Test Frontend Service
         run: |
           FRONTEND_IP=$(kubectl get service frontend-external -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
